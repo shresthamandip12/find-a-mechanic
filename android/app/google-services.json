@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "596116987565",
+    "firebase_url": "https://findamechanic-63c6b.firebaseio.com",
+    "project_id": "findamechanic-63c6b",
+    "storage_bucket": "findamechanic-63c6b.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:596116987565:android:b2ad04f8d5d3fa6fc93024",
+        "android_client_info": {
+          "package_name": "com.cs18.find_a_mechanic"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "596116987565-pbsduhqo235v1555qsnm3sd6nd5ihhga.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDUFHKdfH84voq1096wAmJmFlQMX3DoaTg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "596116987565-pbsduhqo235v1555qsnm3sd6nd5ihhga.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
