@@ -1,6 +1,12 @@
 import 'package:find_a_mechanic/nav/constants.dart';
+import 'package:find_a_mechanic/nav/login.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import 'dart:ui';
+
+import 'package:progress_dialog/progress_dialog.dart';
+
 
 class CreateScreen extends StatefulWidget {
   @override
@@ -9,7 +15,11 @@ class CreateScreen extends StatefulWidget {
 
 }
 class _CreateScreenState extends State<CreateScreen>{
-  String _email , _password;
+
+  ProgressDialog progressDialog;
+  String _email , _password, _confirmpwd;
+  bool _obscureText = true;
+  bool _obscureText1 = true;
   final GlobalKey<FormState>_formkey1 = GlobalKey<FormState>();
   Widget _buildEmailTF(){
     return Column(
@@ -26,6 +36,14 @@ class _CreateScreenState extends State<CreateScreen>{
           height: 60.0,
           child: TextFormField(
             keyboardType: TextInputType.emailAddress,
+            validator: (value){
+              if(value.isEmpty){
+                String a = 'Email is required';
+                return a ;
+              }
+              return null;
+            },
+            onSaved: (input)=> _email = input,
             style: TextStyle(
               color: Colors.white,
               fontFamily: 'OpenSans',
@@ -40,13 +58,7 @@ class _CreateScreenState extends State<CreateScreen>{
               hintText: 'Enter your Email',
               hintStyle: kHintTextStyle,
             ),
-            validator: (String value){
-              if(value.isEmpty){
-                String a = 'Email is required';
-                return  a;
-              }
-              return value;
-            },
+
           ),
         ),
       ],
@@ -66,7 +78,19 @@ class _CreateScreenState extends State<CreateScreen>{
           decoration: kBoxDecorationStyle,
           height: 60.0,
           child: TextFormField(
-            obscureText: true,
+            validator: (value){
+              if(value.isEmpty ){
+
+                String a = 'Password is required';
+                return a ;
+              }
+              if(value.length < 6){
+                return 'Passoword Length less than 6 ';
+              }
+              return null;
+            },
+            onSaved: (input)=> _password = input,
+            obscureText: _obscureText,
             style: TextStyle(
               color: Colors.white,
               fontFamily: 'OpenSans',
@@ -77,9 +101,15 @@ class _CreateScreenState extends State<CreateScreen>{
               prefixIcon: Icon(
                 Icons.lock,
                 color: Colors.white,
+
               ),
               hintText: 'Enter your Password',
               hintStyle: kHintTextStyle,
+              suffixIcon: IconButton(icon: Icon(Icons.visibility),onPressed:(){
+                setState(() {
+                  _obscureText = !_obscureText;
+                });
+              },),
             ),
           ),
         ),
@@ -100,7 +130,18 @@ class _CreateScreenState extends State<CreateScreen>{
           decoration: kBoxDecorationStyle,
           height: 60.0,
           child: TextFormField(
-            obscureText: true,
+            validator: (value){
+              if(value.isEmpty ){
+                String a = 'Confirm your Password';
+                return a ;
+              }
+              if(value.length < 6){
+                return 'Password length less than 6 ';
+              }
+              return null;
+            },
+            onSaved: (input)=> _confirmpwd = input,
+            obscureText: _obscureText1,
             style: TextStyle(
               color: Colors.white,
               fontFamily: 'OpenSans',
@@ -114,19 +155,25 @@ class _CreateScreenState extends State<CreateScreen>{
               ),
               hintText: 'Enter your Password',
               hintStyle: kHintTextStyle,
+              suffixIcon: IconButton(icon: Icon(Icons.visibility),onPressed: (){
+              setState(() {
+                _obscureText1 = !_obscureText1;
+              });
+            },),
             ),
           ),
         ),
       ],
     );
   }
-  Widget _buildRegisterBtn() {
+  Widget _buildRegisterBtn(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(vertical: 25.0),
       width: double.infinity,
       child: RaisedButton(
         elevation: 5.0,
-        onPressed: () => print('Login Button Pressed'),
+
+        onPressed: () => createUserWithEmailAndPassword(context),
         padding: EdgeInsets.all(15.0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30.0),
@@ -184,6 +231,7 @@ class _CreateScreenState extends State<CreateScreen>{
                   vertical: 120.0,
                 ),
                 child: Form(
+                  key: _formkey1,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
@@ -204,7 +252,7 @@ class _CreateScreenState extends State<CreateScreen>{
                       _buildPasswordTF(),
                       SizedBox(height: 20,),
                       _buildConfirmtPasswordBtn(),
-                      _buildRegisterBtn(),
+                      _buildRegisterBtn(context),
 
                     ],
                   ),
@@ -216,11 +264,63 @@ class _CreateScreenState extends State<CreateScreen>{
     );
 
   }
-  void signIn(){
-    final FormState formState  = _formkey1.currentState;
-    if(formState.validate()){
+  Future<void> createUserWithEmailAndPassword(BuildContext context) async{
 
+    progressDialog = ProgressDialog(context,type: ProgressDialogType.Normal);
+    progressDialog.style(
+        message: 'Creating Account...',
+    );
+    if(_formkey1.currentState.validate()){
+      _formkey1.currentState.save();
+      if(_password == _confirmpwd){
+      try{
+        final currentUser = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: _email, password: _password,);
+
+        if(currentUser.user.uid != null){
+          progressDialog.show();
+          await currentUser.user.sendEmailVerification();
+
+              progressDialog.hide();
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+
+        }
+      }catch(e){
+        print(e.message);
+      }
+      }else{
+        showAlertDialog(context,'Password Error','Password mismatched');
+        print('Password not matched');
+      }
     }
+
+
+  }
+  showAlertDialog(BuildContext context,String txt1,String txt2) {
+
+    // set up the button
+    Widget okButton = FlatButton(
+      child: Text("OK"),
+      onPressed:  () {
+        Navigator.of(context).pop();
+      },
+    );
+
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      title: Text(txt1),
+      content: Text(txt2),
+      actions: [
+        okButton,
+      ],
+    );
+
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
   }
 
 }

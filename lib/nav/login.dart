@@ -1,7 +1,12 @@
+import 'package:find_a_mechanic/accountsandpost/createaccn.dart';
+import 'package:find_a_mechanic/accountsandpost/forgetpwd.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:progress_dialog/progress_dialog.dart';
 
 import 'constants.dart';
 import 'drawer.dart';
+import 'home.dart';
 class LoginScreen extends StatefulWidget {
   @override
   State<StatefulWidget> createState() =>_LoginScreenState(); //this
@@ -9,8 +14,10 @@ class LoginScreen extends StatefulWidget {
 
 }
 class _LoginScreenState extends State<LoginScreen>{
+  ProgressDialog progressDialog;
   String _email , _password;
   final GlobalKey<FormState>_formkey = GlobalKey<FormState>();
+  bool _obscureText = true;
   Widget _buildEmailTF(){
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -26,6 +33,14 @@ class _LoginScreenState extends State<LoginScreen>{
           height: 60.0,
           child: TextFormField(
             keyboardType: TextInputType.emailAddress,
+            validator: (value){
+              if(value.isEmpty){
+                String a = 'Email is required';
+                return a ;
+              }
+              return null;
+            },
+            onSaved: (input)=> _email = input,
             style: TextStyle(
               color: Colors.white,
               fontFamily: 'OpenSans',
@@ -40,11 +55,7 @@ class _LoginScreenState extends State<LoginScreen>{
               hintText: 'Enter your Email',
               hintStyle: kHintTextStyle,
             ),
-            validator: (String value){
-              if(value.isEmpty){
-                return 'Email is required';
-              }
-            },
+
           ),
         ),
       ],
@@ -64,7 +75,16 @@ class _LoginScreenState extends State<LoginScreen>{
           decoration: kBoxDecorationStyle,
           height: 60.0,
           child: TextFormField(
-            obscureText: true,
+            obscureText: _obscureText,
+            validator: (value){
+              if(value.isEmpty ){
+                String a = 'Password Required';
+                return a ;
+              }
+
+              return null;
+            },
+            onSaved: (input)=> _password = input,
             style: TextStyle(
               color: Colors.white,
               fontFamily: 'OpenSans',
@@ -78,17 +98,22 @@ class _LoginScreenState extends State<LoginScreen>{
               ),
               hintText: 'Enter your Password',
               hintStyle: kHintTextStyle,
+              suffixIcon: IconButton(icon: Icon(Icons.visibility),onPressed: (){
+                setState(() {
+                  _obscureText = !_obscureText;
+                });
+              },),
             ),
           ),
         ),
       ],
     );
   }
-  Widget _buildForgotPasswordBtn() {
+  Widget _buildForgotPasswordBtn(BuildContext context) {
     return Container(
       alignment: Alignment.centerRight,
       child: FlatButton(
-        onPressed: () => print('Forgot Password Button Pressed'),
+        onPressed: () =>Navigator.of(context).push(MaterialPageRoute(builder: (context) => ForgetPwdScreen())),
         padding: EdgeInsets.only(right: 0.0),
         child: Text(
           'Forgot Password?',
@@ -97,13 +122,13 @@ class _LoginScreenState extends State<LoginScreen>{
       ),
     );
   }
-  Widget _buildLoginBtn() {
+  Widget _buildLoginBtn(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(vertical: 25.0),
       width: double.infinity,
       child: RaisedButton(
         elevation: 5.0,
-        onPressed: () => print('Login Button Pressed'),
+        onPressed: () => signInWithEmailAndPassword(context),
         padding: EdgeInsets.all(15.0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30.0),
@@ -122,32 +147,20 @@ class _LoginScreenState extends State<LoginScreen>{
       ),
     );
   }
-  Widget _buildSignupBtn() {
-    return GestureDetector(
-      onTap: () => print('Sign Up Button Pressed'),
-      child: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: 'Don\'t have an Account? ',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.0,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            TextSpan(
-              text: 'Sign Up',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.0,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+  Widget _buildSignupBtn(BuildContext context) {
+    return Container(
+      alignment: Alignment.center,
+      child: FlatButton(
+        onPressed: () =>  Navigator.of(context).push(MaterialPageRoute(builder: (context) => CreateScreen())),
+        padding: EdgeInsets.only(right: 0.0),
+        child: Text(
+          'Create Account?Sign up',
+          style: TextStyle(color:Colors.white,fontSize: 20,)
         ),
       ),
+
     );
+
   }
   @override
   Widget build(BuildContext context) {
@@ -187,6 +200,7 @@ class _LoginScreenState extends State<LoginScreen>{
                  vertical: 120.0,
                ),
                child: Form(
+                 key: _formkey,
                  child: Column(
                    mainAxisAlignment: MainAxisAlignment.center,
                    children: <Widget>[
@@ -205,9 +219,9 @@ class _LoginScreenState extends State<LoginScreen>{
 
                      ),
                      _buildPasswordTF(),
-                     _buildForgotPasswordBtn(),
-                     _buildLoginBtn(),
-                     _buildSignupBtn(),
+                     _buildForgotPasswordBtn(context),
+                     _buildLoginBtn(context),
+                     _buildSignupBtn(context),
                    ],
                  ),
                ),
@@ -218,11 +232,58 @@ class _LoginScreenState extends State<LoginScreen>{
     );
 
   }
-  void signIn(){
-    final FormState formState  = _formkey.currentState;
-    if(formState.validate()){
+  Future<void> signInWithEmailAndPassword(BuildContext context) async{
+    progressDialog = ProgressDialog(context,type: ProgressDialogType.Normal);
+    progressDialog.style(
+      message: 'Sending Password Reset Email...',
+    );
+    if(_formkey.currentState.validate()){
+      _formkey.currentState.save();
+      try{
+        final currentUser = await FirebaseAuth.instance.signInWithEmailAndPassword(email: _email, password: _password);
+        if(currentUser.user.isEmailVerified){
+          progressDialog.show();
+          progressDialog.hide();
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
+          print("User Verified");
+        }else{
+          showAlertDialog(context,'Email', 'Email not Verified');
+          print("Not Verified");
+        }
 
+      }catch(e){
+        print(e.message);
+      }
     }
+
+
+  }
+  showAlertDialog(BuildContext context,String txt1,String txt2) {
+
+    // set up the button
+    Widget okButton = FlatButton(
+      child: Text("OK"),
+      onPressed:  () {
+        Navigator.of(context).pop();
+      },
+    );
+
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      title: Text(txt1),
+      content: Text(txt2),
+      actions: [
+        okButton,
+      ],
+    );
+
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
   }
 
 }

@@ -29,9 +29,17 @@ class MainDrawer extends StatelessWidget{
              child:Container(
                child: Column(
                  children: <Widget>[
-                   Material(
-                     child:Image.asset('images/mechanic.png',width: 80,height: 80,),
+                   Center(
+                     child: Stack(children: <Widget>[
+                       CircleAvatar(
+                         radius: 45.0,
+                         backgroundImage: AssetImage("images/mechanic.png")
+
+                       ),
+
+                     ]),
                    ),
+                   SizedBox(height: 8,),
                    Text('Find A Mechanic',style: TextStyle(color:Colors.white,fontSize: 18.0),)
                  ],
                ),
