@@ -38,6 +38,11 @@ dependencies:
   uuid: ^2.0.4
   flutter_google_places: ^0.2.4
   google_maps_webservice: ^0.0.16
+  geocoding: ^1.0.0
+  geocoder:
+  flutter_typeahead:
+  provider: ^4.0.4
+  path:
 
 
 

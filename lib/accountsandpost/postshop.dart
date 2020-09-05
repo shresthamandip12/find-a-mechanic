@@ -1,17 +1,18 @@
 import 'dart:io';
-
-import 'package:find_a_mechanic/accountsandpost/suggestion.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:find_a_mechanic/nav/constants.dart';
+import 'package:find_a_mechanic/nav/registration.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:progress_dialog/progress_dialog.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:google_maps_webservice/places.dart';
+import 'package:flutter_google_places/flutter_google_places.dart';
 import 'package:uuid/uuid.dart';
-
-import 'addresssearch.dart';
-
+import 'credentials.dart';
 
 class PostScreen extends StatefulWidget {
   PostScreen({Key key}): super(key: key);
@@ -21,16 +22,23 @@ class PostScreen extends StatefulWidget {
 
 }
 class _PostScreenState extends State<PostScreen>{
+
+  final String API_KEY = 'AIzaSyDDZcscrAvTyTwUYjaxFsGE4uZBXp8QSZw';
     var _image;
-    var _img;
-    String uri;
+    String flag = 'abc';
+    String imguri;
     String _name;
     String _phonenumber;
     String _address;
-
+    String _multiline;
+    String userId;
+  List<String> indexlist = [];
+    String docvalue;
+    final databaseref = Firestore.instance;
     final TextEditingController _controller = TextEditingController();
   ProgressDialog progressDialog;
-
+  final db = Firestore.instance;
+  final FirebaseAuth auth = FirebaseAuth.instance;
   final GlobalKey<FormState>_formkey1 = GlobalKey<FormState>();
 
   Future getImage()async{
@@ -39,16 +47,28 @@ class _PostScreenState extends State<PostScreen>{
       _image = image;
     });
   }
-  Future getIg()async{
-    var img = await ImagePicker.pickImage(source: ImageSource.gallery);
-    setState(() {
-      _img = img;
-    });
-  }
   Future uploadImage() async{
-    final StorageReference storageref = FirebaseStorage.instance.ref().child("Post Image");
-    var timekey = new DateTime.now();
-    final StorageUploadTask storageUploadtask = storageref.child(timekey.toString()+".jpeg").putFile(_image);
+    inputData();
+    if(userId!=null){
+    try {
+      final StorageReference storageReference = FirebaseStorage.instance.ref().child(
+          "Post Image");
+      var timekey = new DateTime.now();
+      final StorageUploadTask storageUploadtask = storageReference.child(
+          timekey.toString() + ".jpeg").putFile(_image);
+      try{
+      StorageTaskSnapshot taskSnapshot = await storageUploadtask.onComplete;
+      var  url = await taskSnapshot.ref.getDownloadURL();
+
+        imguri = url.toString();
+      }catch(e){
+        print("Error in URL");
+      }
+    }catch(e){
+      print("Image not uploaded");
+    }}else{
+      print("No USerid");
+    }
 
   }
     Widget _buildWorkshopNameTF(){
@@ -142,7 +162,7 @@ class _PostScreenState extends State<PostScreen>{
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'Workshop Phone Number',
+            'Workshop Address',
             style: kLabelStyle,
           ),
           SizedBox(height: 10.0),
@@ -152,29 +172,12 @@ class _PostScreenState extends State<PostScreen>{
             height: 60.0,
             child: TextFormField(
               keyboardType: TextInputType.text,
-              readOnly: true,
               validator: (value){
                 if(value.isEmpty){
-                  String a = 'Workshop Phone Number is required';
+                  String a = 'Workshop Address is required';
                   return a ;
                 }
                 return null;
-              },
-              controller: _controller,
-              onTap: () async{
-                final sessionToken = Uuid().v4();
-               final Suggestion results = await showSearch(
-                  context: context,
-
-                  delegate: AddressSearch(sessionToken),
-                );
-               if(results!=null){
-                 setState(() {
-                   _controller.text = results.description;
-                 });
-               }else{
-                 print("No data ");
-               }
               },
               onSaved: (input)=> _address = input,
               style: TextStyle(
@@ -188,13 +191,128 @@ class _PostScreenState extends State<PostScreen>{
                   Icons.location_on,
                   color: Colors.white,
                 ),
-                hintText: 'Enter Address',
+                hintText: 'Enter Workshop Address',
                 hintStyle: kHintTextStyle,
               ),
 
             ),
           ),
         ],
+      );
+    }
+    Widget _buildCurrentBtn(BuildContext context) {
+      return Container(
+        alignment: Alignment.centerRight,
+        child: FlatButton(
+          onPressed: () => print('pressed'),
+          padding: EdgeInsets.only(right: 0.0),
+          child: Text(
+            'Add Near by Location?',
+            style: kLabelStyle,
+          ),
+        ),
+      );
+    }
+    Widget _buildWorkshopDescriptionTF(){
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Service provided Description',
+            style: kLabelStyle,
+          ),
+          SizedBox(height: 10.0),
+          Container(
+            alignment: Alignment.centerLeft,
+            decoration: BoxDecoration(
+
+            ),
+            child: TextFormField(
+              keyboardType: TextInputType.multiline,
+              maxLength: 200,
+              validator: (value){
+                if(value.isEmpty){
+                  String a = 'Description Required';
+                  return a ;
+                }
+                return null;
+              },
+              onSaved: (input)=> _multiline = input,
+              style: TextStyle(
+                color: Colors.white,
+                fontFamily: 'OpenSans',
+              ),
+              decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Colors.white,
+                      )),
+                  focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Colors.white,
+                        width: 2,
+                      )),
+                  labelText: "Description" ,
+                  labelStyle: kLabelStyle,
+                  helperText: "Write About your Service",
+                  helperStyle: kLabelStyle,
+
+              ),
+              maxLines: 5,
+
+            ),
+          ),
+        ],
+      );
+    }
+  Widget _buildRegisterBtn(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 25.0),
+      width: double.infinity,
+      child: RaisedButton(
+        elevation: 5.0,
+        onPressed:createData,
+        padding: EdgeInsets.all(15.0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30.0),
+        ),
+        color: Colors.white,
+        child: Text(
+          'Register',
+          style: TextStyle(
+            color: Color(0xFF527DAA),
+            letterSpacing: 1.5,
+            fontSize: 18.0,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'OpenSans',
+          ),
+        ),
+      ),
+    );
+  }
+    Widget _buildSaveBtn(BuildContext context) {
+      return Container(
+        padding: EdgeInsets.symmetric(vertical: 25.0),
+        width: double.infinity,
+        child: RaisedButton(
+          elevation: 5.0,
+          onPressed:uploadImage,
+          padding: EdgeInsets.all(15.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30.0),
+          ),
+          color: Colors.white,
+          child: Text(
+            'First Upload Image',
+            style: TextStyle(
+              color: Color(0xFF527DAA),
+              letterSpacing: 1.5,
+              fontSize: 18.0,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'OpenSans',
+            ),
+          ),
+        ),
       );
     }
     @override
@@ -261,8 +379,13 @@ class _PostScreenState extends State<PostScreen>{
                       _buildWorkshopPhoneNoTF(),
                       SizedBox(height: 15,),
                       _buildWorkshopAddressTF(context),
-
-
+                      _buildCurrentBtn(context),
+                      SizedBox(height: 10,),
+                      _buildWorkshopDescriptionTF(),
+                      SizedBox(height: 10,),
+                      _buildSaveBtn(context),
+                      SizedBox(height: 10,),
+                      _buildRegisterBtn(context),
                     ],
                   ),
                 ),
@@ -297,5 +420,65 @@ class _PostScreenState extends State<PostScreen>{
         ]),
       );
     }
+    void inputData()async{
+    final FirebaseUser user = await FirebaseAuth.instance.currentUser();
+    final uid = user.uid;
+    setState(() {
+      userId = uid;
+    });
+    }
+    void createData() async {
+    if(_formkey1.currentState.validate()){
+      _formkey1.currentState.save();
+      inputData();
+      if(userId !=null) {
+        try{
+          List<String> splitword = _address.split(" ");
+
+          for(int i =0; i< splitword.length; i++){
+            for(int y = 0;y< splitword[i].length;y++){
+              indexlist.add(splitword[i].substring(0,y).toLowerCase());
+            }
+          }
+        }catch(e){
+            print("Exception in spliting");
+        }
+
+       DocumentReference reference = await databaseref.collection("MechanicShop").add(
+           {
+          'ShopName': _name,
+          'ShopPhone': _phonenumber,
+          'ShopeAddress': _address,
+          'imgURL':imguri,
+          'ShopDescription': _multiline,
+          'userid': userId,
+             'id': flag,
+             'searchindex': indexlist
+        }).then((value) {
+          docvalue = value.documentID ;
+          return null;
+       });
+        print("uploades");
+        print(docvalue);
+       databaseref.collection("MechanicShop").document(docvalue).updateData({
+         "id": docvalue,
+
+       }).then((_) {
+         print("success!");
+       });
+
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => RegistrationScreen()));
+      }else{
+        print("Error in uploading no userid ");
+      }
+    }
+    }
+
 
 }
+
+
+
+
+
+

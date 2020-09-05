@@ -1,10 +1,11 @@
 import 'package:find_a_mechanic/accountsandpost/createaccn.dart';
 import 'package:find_a_mechanic/accountsandpost/postshop.dart';
-import 'package:find_a_mechanic/nav/search.dart';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'constants.dart';
+
+import 'check.dart';
 import 'drawer.dart';
 
 class RegistrationScreen extends StatelessWidget{
@@ -43,7 +44,7 @@ class RegistrationScreen extends StatelessWidget{
       width: double.infinity,
       child: RaisedButton(
         elevation: 5.0,
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => PostScreen())),
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => PostScreenCheck1())),
         padding: EdgeInsets.all(15.0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30.0),
