@@ -1,3 +1,5 @@
+
+import 'package:find_a_mechanic/accountsandpost/accountactivity/yourProfiledetails.dart';
 import 'package:find_a_mechanic/accountsandpost/createaccn.dart';
 import 'package:find_a_mechanic/accountsandpost/postshop.dart';
 
@@ -8,9 +10,27 @@ import 'dart:ui';
 import 'check.dart';
 import 'drawer.dart';
 
-class RegistrationScreen extends StatelessWidget{
+class RegistrationScreen extends StatefulWidget{
+String UserID;
+RegistrationScreen();
+RegistrationScreen.visiblecheck({this.UserID});
 
+  @override
+  _RegistrationScreenState createState() => _RegistrationScreenState();
+}
 
+class _RegistrationScreenState extends State<RegistrationScreen> {
+bool visible = true;
+
+@override
+void initState()  {
+  // TODO: implement initState
+  super.initState();
+ if(widget.UserID == null){
+   visible = !visible;
+ }
+
+}
 
   Widget _buildCreateAccBtn(BuildContext context) {
     return Container(
@@ -38,13 +58,14 @@ class RegistrationScreen extends StatelessWidget{
     );
 
   }
+
   Widget _buildMechanicEntryBtn(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(vertical: 25.0),
       width: double.infinity,
       child: RaisedButton(
         elevation: 5.0,
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => PostScreenCheck1())),
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => PostScreen())),
         padding: EdgeInsets.all(15.0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30.0),
@@ -63,6 +84,36 @@ class RegistrationScreen extends StatelessWidget{
       ),
     );
   }
+
+  Widget _buildAccnActivityBtn(BuildContext context) {
+    return Visibility(
+      visible: visible,
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 25.0),
+        width: double.infinity,
+        child: RaisedButton(
+          elevation: 5.0,
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => ProfilePage())),
+          padding: EdgeInsets.all(15.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30.0),
+          ),
+          color: Colors.white,
+          child: Text(
+            'Your Activity',
+            style: TextStyle(
+              color: Color(0xFF527DAA),
+              letterSpacing: 1.5,
+              fontSize: 18.0,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'OpenSans',
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
 
@@ -103,11 +154,11 @@ class RegistrationScreen extends StatelessWidget{
 
                 ),
               _buildMechanicEntryBtn(context),
+              _buildAccnActivityBtn(context),
             ],
           ),
 
         )
     );
   }
-
 }

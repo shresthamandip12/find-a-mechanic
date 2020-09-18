@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:find_a_mechanic/nav/constants.dart';
 import 'package:find_a_mechanic/nav/login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -17,10 +18,53 @@ class CreateScreen extends StatefulWidget {
 class _CreateScreenState extends State<CreateScreen>{
 
   ProgressDialog progressDialog;
-  String _email , _password, _confirmpwd;
+  String _email , _password, _confirmpwd,_name;
   bool _obscureText = true;
   bool _obscureText1 = true;
   final GlobalKey<FormState>_formkey1 = GlobalKey<FormState>();
+  Widget _buildNameTF(){
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'Name',
+          style: kLabelStyle,
+        ),
+        SizedBox(height: 10.0),
+        Container(
+          alignment: Alignment.centerLeft,
+          decoration: kBoxDecorationStyle,
+          height: 60.0,
+          child: TextFormField(
+            keyboardType: TextInputType.emailAddress,
+            validator: (value){
+              if(value.isEmpty){
+                String a = 'Name is required';
+                return a ;
+              }
+              return null;
+            },
+            onSaved: (input)=> _name = input,
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'OpenSans',
+            ),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.only(top: 14.0),
+              prefixIcon: Icon(
+                Icons.email,
+                color: Colors.white,
+              ),
+              hintText: 'Enter your Name',
+              hintStyle: kHintTextStyle,
+            ),
+
+          ),
+        ),
+      ],
+    );
+  }
   Widget _buildEmailTF(){
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,11 +287,12 @@ class _CreateScreenState extends State<CreateScreen>{
                           fontSize: 30.0,
                           fontWeight: FontWeight.bold,
                         ),
-                      ), SizedBox(height: 30.0),
+                      ),SizedBox(height: 30.0),
+                      _buildNameTF(),
+                      SizedBox(height: 30.0),
                       _buildEmailTF(),
                       SizedBox(
                         height: 30.0,
-
                       ),
                       _buildPasswordTF(),
                       SizedBox(height: 20,),
@@ -275,7 +320,14 @@ class _CreateScreenState extends State<CreateScreen>{
       if(_password == _confirmpwd){
       try{
         final currentUser = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: _email, password: _password,);
-
+        DocumentReference reference = await Firestore.instance.collection("User").document(currentUser.user.uid).setData(
+            {
+              'Your Name': _name,
+              'Your Email': _email,
+            }).then((_) {
+              print("upload successfull");
+              return null;
+        });
         if(currentUser.user.uid != null){
           progressDialog.show();
           await currentUser.user.sendEmailVerification();

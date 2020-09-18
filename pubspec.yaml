@@ -40,9 +40,11 @@ dependencies:
   google_maps_webservice: ^0.0.16
   geocoding: ^1.0.0
   geocoder:
+  geolocator: ^6.0.0+4
   flutter_typeahead:
   provider: ^4.0.4
   path:
+  url_launcher: ^5.5.3
 
 
 

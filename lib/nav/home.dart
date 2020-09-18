@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 
 class HomeScreen extends StatelessWidget{
 
-
   @override
   Widget build(BuildContext context) {
     final shps = Provider.of<List<ShopModel>>(context);
@@ -36,7 +35,7 @@ class HomeScreen extends StatelessWidget{
                return  GestureDetector(
                  onTap: (){
                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DetailScreen(shopname: shps[i].shopname,phonenumber: shps[i].phone,
-                     address:shps[i].address,imgURL: shps[i].imageUrl,description: shps[i].description,)));
+                     address:shps[i].address,imgURL: shps[i].imageUrl,description: shps[i].description,function: (){Navigator.push(context, MaterialPageRoute(builder: (context)=>HomeScreen()));} ,)));
 
                  },
                  child: Padding(

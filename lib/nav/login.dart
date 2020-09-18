@@ -14,6 +14,9 @@ class LoginScreen extends StatefulWidget {
 
 }
 class _LoginScreenState extends State<LoginScreen>{
+  int i = 0;
+
+
   ProgressDialog progressDialog;
   String _email , _password;
   final GlobalKey<FormState>_formkey = GlobalKey<FormState>();
@@ -233,21 +236,44 @@ class _LoginScreenState extends State<LoginScreen>{
 
   }
   Future<void> signInWithEmailAndPassword(BuildContext context) async{
-    progressDialog = ProgressDialog(context,type: ProgressDialogType.Normal);
-    progressDialog.style(
-      message: 'Sending Password Reset Email...',
-    );
+
     if(_formkey.currentState.validate()){
       _formkey.currentState.save();
       try{
-        final currentUser = await FirebaseAuth.instance.signInWithEmailAndPassword(email: _email, password: _password);
+        final currentUser = await FirebaseAuth.instance.signInWithEmailAndPassword(email: _email, password: _password).catchError((err) {
+          showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: Text("Error"),
+                  content: Text(err.message),
+                  actions: [
+                    FlatButton(
+                      child: Text("Ok"),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    )
+                  ],
+                );
+              });
+        });
         if(currentUser.user.isEmailVerified){
-          progressDialog.show();
-          progressDialog.hide();
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
+
+
+          showAlertDialog(context,'Email', 'User is Logged In', () {
+
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
+
+          });
+
+
           print("User Verified");
-        }else{
-          showAlertDialog(context,'Email', 'Email not Verified');
+        }
+        else{
+          showAlertDialog(context,'Email', 'Email not Verified', () {
+            Navigator.of(context).pop();
+          });
           print("Not Verified");
         }
 
@@ -258,14 +284,12 @@ class _LoginScreenState extends State<LoginScreen>{
 
 
   }
-  showAlertDialog(BuildContext context,String txt1,String txt2) {
+  showAlertDialog(BuildContext context,String txt1,String txt2,Function function) {
 
     // set up the button
     Widget okButton = FlatButton(
       child: Text("OK"),
-      onPressed:  () {
-        Navigator.of(context).pop();
-      },
+      onPressed: function,
     );
 
     // set up the AlertDialog

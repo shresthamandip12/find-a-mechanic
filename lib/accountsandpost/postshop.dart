@@ -1,8 +1,12 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:find_a_mechanic/accountsandpost/placeservicecheck.dart';
 import 'package:find_a_mechanic/nav/constants.dart';
+import 'package:find_a_mechanic/nav/home.dart';
 import 'package:find_a_mechanic/nav/registration.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geocoder/geocoder.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +27,7 @@ class PostScreen extends StatefulWidget {
 }
 class _PostScreenState extends State<PostScreen>{
 
-  final String API_KEY = 'AIzaSyDDZcscrAvTyTwUYjaxFsGE4uZBXp8QSZw';
+  var support;
     var _image;
     String flag = 'abc';
     String imguri;
@@ -48,7 +52,6 @@ class _PostScreenState extends State<PostScreen>{
     });
   }
   Future uploadImage() async{
-    inputData();
     if(userId!=null){
     try {
       final StorageReference storageReference = FirebaseStorage.instance.ref().child(
@@ -56,17 +59,26 @@ class _PostScreenState extends State<PostScreen>{
       var timekey = new DateTime.now();
       final StorageUploadTask storageUploadtask = storageReference.child(
           timekey.toString() + ".jpeg").putFile(_image);
+
       try{
       StorageTaskSnapshot taskSnapshot = await storageUploadtask.onComplete;
-      var  url = await taskSnapshot.ref.getDownloadURL();
-
-        imguri = url.toString();
+      var  url = await taskSnapshot.ref.getDownloadURL().then((value) => support = value);
+      imguri = url.toString();
+      showAlertDialog(context, "Image", " Imageuploaded", () {
+        Navigator.of(context).pop();
+      },);
       }catch(e){
         print("Error in URL");
       }
     }catch(e){
+      showAlertDialog(context, "Image", "No Imageuploaded", () {
+        Navigator.of(context).pop();
+      },);
       print("Image not uploaded");
     }}else{
+      showAlertDialog(context, "Email", "No Email logged in ", () {
+        Navigator.of(context).pop();
+      },);
       print("No USerid");
     }
 
@@ -157,54 +169,64 @@ class _PostScreenState extends State<PostScreen>{
         ],
       );
     }
-    Widget _buildWorkshopAddressTF(BuildContext context){
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            'Workshop Address',
-            style: kLabelStyle,
-          ),
-          SizedBox(height: 10.0),
-          Container(
-            alignment: Alignment.centerLeft,
-            decoration: kBoxDecorationStyle,
-            height: 60.0,
-            child: TextFormField(
-              keyboardType: TextInputType.text,
-              validator: (value){
-                if(value.isEmpty){
-                  String a = 'Workshop Address is required';
-                  return a ;
-                }
-                return null;
-              },
-              onSaved: (input)=> _address = input,
-              style: TextStyle(
-                color: Colors.white,
-                fontFamily: 'OpenSans',
-              ),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.only(top: 14.0),
-                prefixIcon: Icon(
-                  Icons.location_on,
+  Widget _buildWorkshopAddressTF(BuildContext context){
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'Workshop Address',
+          style: kLabelStyle,
+        ),
+        SizedBox(height: 10.0),
+        Container(
+          alignment: Alignment.centerLeft,
+          decoration: kBoxDecorationStyle,
+          height: 60.0,
+          child: TypeAheadFormField(
+            textFieldConfiguration: TextFieldConfiguration(controller: this._controller,
+                style: TextStyle(
                   color: Colors.white,
+                  fontFamily: 'OpenSans',
                 ),
-                hintText: 'Enter Workshop Address',
-                hintStyle: kHintTextStyle,
-              ),
 
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.only(top: 14.0),
+                  prefixIcon: Icon(
+                    Icons.location_on,
+                    color: Colors.white,
+                  ),
+                  hintText: 'Enter Workshop Address',
+                  hintStyle: kHintTextStyle,
+                )
             ),
+            suggestionsCallback: (pattern)async {
+              return await NeedsData.getSuggestions(pattern);
+            },
+            itemBuilder: (context, suggestion) {
+              return ListTile(
+                title: Text(suggestion),
+              );
+            },
+            transitionBuilder: (context, suggestionsBox, controller) {
+              return suggestionsBox;
+            },
+            onSuggestionSelected: (suggestion) async {
+              this._controller.text = suggestion;
+            },
+
+            onSaved: (value) => this._address = this._controller.text,
           ),
-        ],
-      );
-    }
+        ),
+
+      ],
+    );
+  }
     Widget _buildCurrentBtn(BuildContext context) {
       return Container(
         alignment: Alignment.centerRight,
         child: FlatButton(
-          onPressed: () => print('pressed'),
+          onPressed: getCurrentAddress,
           padding: EdgeInsets.only(right: 0.0),
           child: Text(
             'Add Near by Location?',
@@ -320,7 +342,11 @@ class _PostScreenState extends State<PostScreen>{
       _controller.dispose();
       super.dispose();
     }
-
+  @override
+  void initState() {
+    super.initState();
+    inputData();
+  }
     @override
   Widget build(BuildContext context) {
     // TODO: implement build
@@ -420,7 +446,34 @@ class _PostScreenState extends State<PostScreen>{
         ]),
       );
     }
-    void inputData()async{
+  void  getCurrentAddress ()async{
+    try {
+      final geoposition = await getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium);
+      double latitudedata = geoposition.latitude;
+      double longtitudedata = geoposition.longitude;
+      print(longtitudedata);
+      print(latitudedata);
+      final coordinates = new Coordinates(
+          geoposition.latitude, geoposition.longitude);
+      var currentAddress = await Geocoder.local.findAddressesFromCoordinates(
+          coordinates);
+      String addressLine1 = currentAddress.first.addressLine.toString();
+
+      _controller.text = addressLine1.trim();
+    }
+    catch(e){
+      print("Error in sending value");
+
+    }
+
+    print(_controller.text);
+
+
+
+  }
+
+  void inputData()async{
     final FirebaseUser user = await FirebaseAuth.instance.currentUser();
     final uid = user.uid;
     setState(() {
@@ -430,16 +483,26 @@ class _PostScreenState extends State<PostScreen>{
     void createData() async {
     if(_formkey1.currentState.validate()){
       _formkey1.currentState.save();
-      inputData();
-      if(userId !=null) {
+      if(userId !=null && imguri !=null) {
         try{
-          List<String> splitword = _address.split(" ");
+          List<String> splitword = _address.split(' ');
+           int n = splitword.length;
+           if(splitword[n-2] == "Kathmandu,") {
+             splitword.removeRange(n-2,n);
 
-          for(int i =0; i< splitword.length; i++){
-            for(int y = 0;y< splitword[i].length;y++){
-              indexlist.add(splitword[i].substring(0,y).toLowerCase());
-            }
-          }
+             for (int i = 0; i <= splitword.length; i++) {
+               for (int y = 0; y <= splitword[i].length; y++) {
+                 indexlist.add(splitword[i].substring(0, y).toLowerCase());
+               }
+             }
+           }else if(splitword[n-1]=="Nepal") {
+             splitword.removeLast();
+             for (int i = 0; i <= splitword.length; i++) {
+               for (int y = 0; y <= splitword[i].length; y++) {
+                 indexlist.add(splitword[i].substring(0, y).toLowerCase());
+               }
+             }
+           }
         }catch(e){
             print("Exception in spliting");
         }
@@ -464,15 +527,51 @@ class _PostScreenState extends State<PostScreen>{
          "id": docvalue,
 
        }).then((_) {
-         print("success!");
-       });
 
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => RegistrationScreen()));
+         print("success!");
+
+       });
+        showAlertDialog(context, 'Upload', 'Upload SuccessFul',(){Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));});
       }else{
-        print("Error in uploading no userid ");
+        if(imguri == null) {
+          showAlertDialog(context, 'Image', 'Image not Uploaded', () {
+            Navigator.of(context).pop();
+          },);
+        }else{
+          showAlertDialog(context, 'Email', 'You are not Logged in', () {
+            Navigator.of(context).pop();
+          },);
+          print("Error in uploading no userid ");
+        }
+
       }
     }
     }
+  showAlertDialog(BuildContext context,String txt1,String txt2,Function function) {
+
+    // set up the button
+    Widget okButton = FlatButton(
+      child: Text("OK"),
+      onPressed: function,
+    );
+
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      title: Text(txt1),
+      content: Text(txt2),
+      actions: [
+        okButton,
+      ],
+    );
+
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
+  }
 
 
 }

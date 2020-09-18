@@ -3,11 +3,28 @@ import 'dart:ui';
 import 'package:find_a_mechanic/nav/home.dart';
 import 'package:find_a_mechanic/nav/login.dart';
 import 'package:find_a_mechanic/nav/registration.dart';
-import 'package:find_a_mechanic/nav/search.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'check.dart';
+class MainDrawer extends StatefulWidget{
 
-class MainDrawer extends StatelessWidget{
+
+
   @override
+  _MainDrawerState createState() => _MainDrawerState();
+}
+
+class _MainDrawerState extends State<MainDrawer> {
+  bool visible = true;
+    String userID;
+  @override
+  void initState()  {
+    // TODO: implement initState
+    super.initState();
+    checkuserstatus();
+
+  }
+    @override
   Widget build(BuildContext context) {
    return Drawer(
      child: ListView(
@@ -44,11 +61,17 @@ class MainDrawer extends StatelessWidget{
                  ],
                ),
              )),
-         CustomTiles(Icons.home,' Home',(){Navigator.push(context, MaterialPageRoute(builder: (context)=>HomeScreen()));}),
-         CustomTiles(Icons.search,' Find A Mechanic',(){Navigator.push(context, MaterialPageRoute(builder: (context)=>SearchScreen()));}),
-         CustomTiles(Icons.add_box,' Be a Mechanic',(){Navigator.push(context, MaterialPageRoute(builder: (context)=>RegistrationScreen()));}),
-         CustomTiles(Icons.person,' Login',(){Navigator.push(context, MaterialPageRoute(builder: (context)=>LoginScreen()));}),
-         CustomTiles(Icons.exit_to_app,' Logout',()=>{}),
+         CustomTiles(Icons.home,' Home',(){Navigator.push(context, MaterialPageRoute(builder: (context)=>HomeScreen()));},true),
+         CustomTiles(Icons.search,' Find A Mechanic',(){Navigator.push(context, MaterialPageRoute(builder: (context)=>SearchScreen1()));},true),
+         CustomTiles(Icons.add_box,' Be a Mechanic',(){Navigator.push(context, MaterialPageRoute(builder: (context)=>RegistrationScreen.visiblecheck(UserID: userID,)));},true),
+
+         CustomTiles(Icons.person,' Login',(){Navigator.push(context, MaterialPageRoute(builder: (context)=>LoginScreen()));},visible),
+         CustomTiles(Icons.exit_to_app,' Logout',()async{
+           FirebaseAuth.instance.signOut().then((_) {
+             Navigator.push(context, MaterialPageRoute(builder: (context)=>LoginScreen()));
+            print("Logout Successful");
+           });
+         },!visible),
 
        ],
      )
@@ -56,41 +79,89 @@ class MainDrawer extends StatelessWidget{
    );
   }
 
+  void checkuserstatus()async{
+    final FirebaseUser user = await FirebaseAuth.instance.currentUser();
+    try {
+      final uid = user.uid;
+      setState(() {
+        if(uid !=null){
+          userID = uid;
+          visible = !visible;
+          print(visible);
+        }else{
+          print(visible);
+        }
+      });
+    }catch(e){
+      print("user is not logged");
+    }
+
+  }
+  showAlertDialog(BuildContext context,String txt1,String txt2,Function function) {
+
+    // set up the button
+    Widget okButton = FlatButton(
+      child: Text("OK"),
+      onPressed: function,
+    );
+
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      title: Text(txt1),
+      content: Text(txt2),
+      actions: [
+        okButton,
+      ],
+    );
+
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
+  }
 }
 class CustomTiles extends StatelessWidget{
   IconData icon;
   String text;
   Function onTap;
+  bool visibile;
+  CustomTiles(this.icon,this.text,this.onTap,this.visibile);
 
-  CustomTiles(this.icon,this.text,this.onTap);
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 0),
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: Colors.grey.shade400))
-        ),
-        child: InkWell(
-          splashColor: Colors.cyan,
-          onTap: onTap,
-          child: Container(
-            height: 70,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Icon(icon),
-                    Text(text,style: TextStyle(fontSize: 16.0),)
-                  ],
-                ),
+    return Visibility(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 0),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.grey.shade400))
+          ),
+          child: InkWell(
+            splashColor: Colors.cyan,
+            onTap: onTap,
+            child: Container(
+              height: 70,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Icon(icon),
+                      Text(text,style: TextStyle(fontSize: 16.0),)
+                    ],
+                  ),
 
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
+      visible: visibile,
     );
   }
 
